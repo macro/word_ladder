@@ -84,11 +84,12 @@ BFS is O(|V| + |E|).
       5: twa
       6: two
 
-    real    0m0.461s
-    user    0m0.430s
-    sys     0m0.028s
+    real    0m0.173s
+    user    0m0.158s
+    sys     0m0.014s
 
   Testing 4-letter words:
+
     $ time python word_ladder.py four five
     Reading dictionary ...
     Grouping 4994 words ...
@@ -102,9 +103,9 @@ BFS is O(|V| + |E|).
       5: fire
       6: five
 
-    real    0m0.612s
-    user    0m0.577s
-    sys     0m0.033s
+    real    0m0.246s
+    user    0m0.229s
+    sys     0m0.016s
 
   Testing 5-letter words:
 
@@ -121,9 +122,7 @@ BFS is O(|V| + |E|).
       5: blain
       6: brain
 
-    real    0m1.493s
-    user    0m1.417s
-    sys     0m0.075s
+    real    0m0.360s
+    user    0m0.338s
+    sys     0m0.020s
 
-###Optimizations
-BFS could be expensive (cpu and memory) for large graphs.

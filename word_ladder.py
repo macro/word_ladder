@@ -20,6 +20,7 @@ class Graph(object):
         self._graph = {}
 
     def add_edge(self, v1, v2):
+        self.edge_count += 1
         # add edge for v1
         try:
             edges = self._graph[v1]
@@ -36,19 +37,23 @@ class Graph(object):
 
     def bfs(self, start, end):
         queue = deque([[start]])
+        seen = {start}
         while queue:
             path = queue.popleft()
             v1 = path[-1]
             if v1 == end:
                 return path
             for v2 in self._graph.get(v1, []):
-                if v2 == start:
-                    # prevent cycles
+                if v2 in seen:
+                    # we've queued this vertex, so it cannot be part of the
+                    # shortest path here, this also prevent cycles
                     continue
                 new_path = list(path)
                 new_path.append(v2)
                 queue.append(new_path)
-        return queue
+                seen.add(v2)
+        return None
+
 
     def __repr__(self):
         l = []
@@ -65,6 +70,7 @@ class WordGraph(Graph):
     def __init__(self, dictionary='/usr/share/dict/words', word_size=5):
         # could serialize graph to reduce startup time for large dictionaries
         super(WordGraph, self).__init__()
+        self.edge_count = 0
         self.word_set = set()
         print >> sys.stderr, 'Reading dictionary ...'
         try:
@@ -90,11 +96,9 @@ class WordGraph(Graph):
                 words.append(w)
 
         print >> sys.stderr, 'Building word graph ...'
-        self.edge_count = 0
         for part,words in words_by_part.iteritems():
             for v1,v2 in itertools.combinations(words, 2):
                 self.add_edge(v1, v2)
-                self.edge_count += 1
 
 
     def find_transformation(self, start, end):
@@ -122,6 +126,11 @@ def main():
     parser.add_argument('start')
     parser.add_argument('end')
     args = parser.parse_args()
+
+    if len(args.start) != len(args.end):
+        print 'start word `{}` is not the same length as end word `{}`'.format(
+            args.start, args.end)
+        return
 
     wg = WordGraph(word_size=len(args.start))
     path = wg.find_transformation(args.start, args.end)
