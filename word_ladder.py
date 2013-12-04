@@ -11,6 +11,9 @@ import itertools
 import functools
 import time
 import logging
+import threading
+
+from multiprocessing.pool import ThreadPool
 
 from collections import deque
 from contextlib import contextmanager
@@ -93,9 +96,11 @@ class WordGraph(Graph):
     """
 
     @timethis
-    def __init__(self, dictionary='/usr/share/dict/words', word_size=5):
+    def __init__(self, dictionary='/usr/share/dict/words', word_size=5, with_threads=False):
         # could serialize graph to reduce startup time for large dictionaries
         super(WordGraph, self).__init__()
+        self.word_size = word_size
+        self.with_threads = with_threads
         self.edge_count = 0
         self.word_set = set()
         logging.info('Reading dictionary ...')
@@ -104,30 +109,49 @@ class WordGraph(Graph):
                 with open(dictionary, 'r') as f:
                     for word in f:
                         word = word.strip()
-                        if len(word) != word_size:
+                        if len(word) != self.word_size:
                             continue
                         self.word_set.add(word.lower())
             except Exception, e:
                 logging.info('Failed to load dictionary: `{}` ({})'.format(dictionary, e))
                 return
 
+        pool = ThreadPool()  # create a thread pool w/ N threads, where N is the cpu count
         logging.info('Grouping {} words ...'.format(len(self.word_set)))
-        with timethis('grouping words'):
-            words_by_part = {}
-            for w in list(self.word_set):
-                for i in range(word_size):
-                    part = '{}?{}'.format(w[:i], w[i+1:])
-                    try:
-                        words = words_by_part[part]
-                    except KeyError:
-                        words = words_by_part[part] = []
-                    words.append(w)
+        self.words_by_part = {}
+        if self.with_threads:
+            self.words_by_part_lock = threading.Lock()
+            with timethis('grouping words (with threads)'):
+                result = pool.map_async(self._group_word_thread, list(self.word_set))
+                result.wait()  # wait for all threads to finish
+        else:
+            with timethis('grouping words'):
+                for word in list(self.word_set):
+                    for i in range(self.word_size):
+                        part = '{}?{}'.format(word[:i], word[i+1:])
+                        try:
+                            words = self.words_by_part[part]
+                        except KeyError:
+                            words = self.words_by_part[part] = []
+                        words.append(word)
 
+        logging.info('Building word graph ...')
         with timethis('create word graph'):
-            logging.info('Building word graph ...')
-            for part,words in words_by_part.iteritems():
+            for part,words in self.words_by_part.iteritems():
                 for v1,v2 in itertools.combinations(words, 2):
                     self.add_edge(v1, v2)
+
+
+    def _group_word_thread(self, word):
+        with self.words_by_part_lock:
+            for i in range(self.word_size):
+                part = '{}?{}'.format(word[:i], word[i+1:])
+                try:
+                    words = self.words_by_part[part]
+                except KeyError:
+                    words = self.words_by_part[part] = []
+                words.append(word)
+
 
     @timethis
     def find_transformation(self, start, end):
@@ -154,6 +178,7 @@ def test():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', default='INFO')
+    parser.add_argument('--with-threads', '-t', action='store_true', default=False)
     parser.add_argument('start')
     parser.add_argument('end')
     args = parser.parse_args()
@@ -166,7 +191,7 @@ def main():
             args.start, len(args.start), args.end, len(args.end))
         return
 
-    wg = WordGraph(word_size=len(args.start))
+    wg = WordGraph(word_size=len(args.start), with_threads=args.with_threads)
     path = wg.find_transformation(args.start, args.end)
     if not path:
         print 'No path from `{}` to `{}`'.format(args.start, args.end)
