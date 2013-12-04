@@ -186,9 +186,9 @@ A large amount of time is spent creating the word graph.  This is easiest to see
 
   It's slower than the non-threaded version!  There are two reasons for this:
 
-    1. Function calls in Python is very expensive and the threaded
+    1. Function calls in Python are very expensive and the threaded
        implmentation adds function call overhead (mostly in `ThreadPool`.)
-    2. The Python Global Interpreter Lock (GIL) prevents Python threads from
+    2. The Python Global Interpreter Lock (GIL) prevents  threads from
        executing concurrently in the interpreter. So, threads in Python don't
        have all the benefits for computationally expensive tasks that they do in
        other languages.
