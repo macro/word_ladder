@@ -48,7 +48,6 @@ class Graph(object):
         self._graph = {}
 
     def add_edge(self, v1, v2):
-        self.edge_count += 1
         # add edge for v1
         try:
             edges = self._graph[v1]
@@ -101,7 +100,6 @@ class WordGraph(Graph):
         super(WordGraph, self).__init__()
         self.word_size = word_size
         self.with_threads = with_threads
-        self.edge_count = 0
         self.word_set = set()
         logging.info('Reading dictionary ...')
         with timethis('create word_set'):
@@ -117,7 +115,8 @@ class WordGraph(Graph):
                 return
 
         pool = ThreadPool()  # create a thread pool w/ N threads, where N is the cpu count
-        logging.info('Grouping {} words ...'.format(len(self.word_set)))
+        logging.info('Partitioning {} words of length {} ...'.format(
+                    len(self.word_set), self.word_size))
         self.words_by_part = {}
         if self.with_threads:
             self.words_by_part_lock = threading.Lock()
@@ -162,14 +161,17 @@ class WordGraph(Graph):
             print '`{}` not in dictionary'.format(end)
             return []
 
+        vertex_count = len(self._graph.keys())
+        edge_count = sum(len(v) for v in self._graph.itervalues())  // 2  # undirected graph represented as 2 directed edges
         logging.info('Finding word transformations in word graph '
-                '(vertices={}, edges={}) ...'.format(len(self.word_set), self.edge_count))
+                '(vertices={}, edges={}) ...'.format(vertex_count, edge_count))
         return self.bfs(start, end)
 
 
 def test():
     wg = WordGraph(dictionary='words')
-    assert wg.find_transformation("smart", "brain") == ["smart", "start",
+    path = wg.find_transformation("smart", "brain")
+    assert path == ["smart", "start",
             "stark", "stack", "slack", "black", "blank", "bland",
             "brand", "braid", "brain"]
 
@@ -177,6 +179,7 @@ def test():
 @timethis
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dictionary', '-d', default='/usr/share/dict/words')
     parser.add_argument('--debug', default='INFO')
     parser.add_argument('--with-threads', '-t', action='store_true', default=False)
     parser.add_argument('start')
@@ -191,7 +194,7 @@ def main():
             args.start, len(args.start), args.end, len(args.end))
         return
 
-    wg = WordGraph(word_size=len(args.start), with_threads=args.with_threads)
+    wg = WordGraph(dictionary=args.dictionary, word_size=len(args.start), with_threads=args.with_threads)
     path = wg.find_transformation(args.start, args.end)
     if not path:
         print 'No path from `{}` to `{}`'.format(args.start, args.end)
