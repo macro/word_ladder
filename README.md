@@ -59,25 +59,6 @@ it's a lot less.
 Traversing the graph using BFS is O(|V| + |E|), where |V| is the number of
 vertices and |E| is the number of edges.
 
-####Erlang Implementation
-
-    $ erlc word_ladder.erl && time erl -s word_ladder start smart brain -s erlang halt -noshell
-    Paritioning words of length 5 ...
-    Building word graph ...
-    Finding word transformations in word graph (vertices=8953, edges=21891) ...
-    Found path from "smart" to "brain":
-      1: "smart"
-      2: "slart"
-      3: "slait"
-      4: "slain"
-      5: "blain"
-      6: "brain"
-
-    real    0m3.474s
-    user    0m3.424s
-    sys     0m0.064s
-
-
 ###Testing
 
 ####Run unittest using test dictionary:
@@ -151,6 +132,25 @@ vertices and |E| is the number of edges.
     real    0m0.360s
     user    0m0.338s
     sys     0m0.020s
+
+
+####Erlang Implementation
+
+    $ erlc word_ladder.erl && time erl -s word_ladder start smart brain -s erlang halt -noshell
+    Paritioning words of length 5 ...
+    Building word graph ...
+    Finding word transformations in word graph (vertices=8953, edges=21891) ...
+    Found path from "smart" to "brain":
+      1: "smart"
+      2: "slart"
+      3: "slait"
+      4: "slain"
+      5: "blain"
+      6: "brain"
+
+    real    0m3.474s
+    user    0m3.424s
+    sys     0m0.064s
 
 
 ####Optimizations:
